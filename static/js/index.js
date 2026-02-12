@@ -100,8 +100,10 @@ $(document).ready(function() {
 
     bulmaSlider.attach();
 
-    // Box Augmentation Demo functionality
-    initializeBoxAugmentationDemo();
+    // Box Augmentation Demo functionality (only initialize if legacy demo elements exist)
+    if (document.getElementById('pose-demo-iframe')) {
+        initializeBoxAugmentationDemo();
+    }
 
 })
 
