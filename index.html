@@ -242,20 +242,7 @@
   </div>
 </section> -->
 
-<section class="section">
-  <div class="container">
-        <h2 class="title is-2" style="text-align: center;">Abstract</h2>
-        <div class="content has-text-justified">
-          <p class="abstract-text" style="font-size: 0.95rem; line-height: 1.5;">
-            While recent advances in humanoid locomotion have achieved stable walking on varied terrains, capturing the agility and adaptivity of highly dynamic human motions remains an open challenge. In particular, agile parkour in complex environments demands not only low-level robustness, but also human-like motion expressiveness, long-horizon skill composition, and perception-driven decision-making. In this paper, we present Perceptive Humanoid Parkour (PHP), a modular framework that enables humanoid robots to autonomously perform long-horizon, vision-based parkour across challenging obstacle courses. Our approach first leverages motion matching, formulated as nearest-neighbor search in a feature space, to compose retargeted atomic human skills into long-horizon kinematic trajectories. This framework enables the flexible composition and smooth transition of complex skill chains while preserving the elegance and fluidity of dynamic human motions. Next, we train motion-tracking reinforcement learning (RL) expert policies for these composed motions, and distill them into a single depth-based, multi-skill student policy, using a combination of DAgger and RL. Crucially, the combination of perception and skill composition enables autonomous, context-aware decision-making: using only onboard depth sensing and a discrete 2D velocity command, the robot selects and executes whether to step over, climb onto, vault or roll off obstacles of varying geometries and heights. We validate our framework with extensive real-world experiments on a Unitree G1 humanoid robot, demonstrating highly dynamic parkour skills such as climbing tall obstacles up to 1.25m (96% robot height), as well as long-horizon multi-obstacle traversal with closed-loop adaptation to real-time obstacle perturbations.
-           
-          </p>
-        </div>
-        <div style="text-align: center;">
-          <img src="./static/images/fig2_method.png" class="interpolation-image" style="width: 75%; height: auto;"/>
-        </div>
-  </div>
-</section>
+
 
 <section class="section">
   <div class="container">
@@ -386,6 +373,25 @@
     <p class="has-text-centered" style="font-size: 1.0rem; margin-bottom: 2rem; color: #666;">
       The demo may take a few seconds to load as models and assets are streamed.
     </p>
+    
+    <div class="has-text-centered" style="margin-bottom: 2rem; padding: 1rem; background-color: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
+      <h3 class="title is-5" style="margin-bottom: 0.75rem; color: #333;">🎮 How to Play</h3>
+      <div style="font-size: 0.95rem; line-height: 1.6; color: #555; max-width: 800px; margin: 0 auto;">
+        <p style="margin-bottom: 0.75rem;">
+          <strong>Controls:</strong><br>
+          <span style="display: inline-block; margin: 0.2rem 0;"><kbd style="background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">W</kbd> - Move forward</span>
+          <span style="display: inline-block; margin: 0.2rem 0.5rem;"><kbd style="background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">A</kbd> - Turn left</span>
+          <span style="display: inline-block; margin: 0.2rem 0.5rem;"><kbd style="background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">D</kbd> - Turn right</span>
+          <span style="display: inline-block; margin: 0.2rem 0.5rem;"><kbd style="background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">Y</kbd> - Toggle speed mode</span>
+        </p>
+        <p style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0; font-style: italic; color: #444; font-size: 0.9rem;">
+          <strong>💡 Tips:</strong>
+          <br>1️⃣ When you spot an obstacle, hold <kbd style="background: #fff3cd; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: bold;">W</kbd> from the moment you approach it until you’ve completely cleared it. Don’t let go and don’t spam other keys.
+          <br>2️⃣ In the gaps between obstacles, you can quickly tap <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">A</kbd> / <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">D</kbd> to fine‑tune your direction, or press <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">Y</kbd> to switch between low and high speed and find your favorite rhythm.
+          <br>3️⃣ If you crash, drift off course, or just want another run, hit the Reload button to instantly restart a new run.
+        </p>
+      </div>
+    </div>
 
     <div class="columns is-centered">
       <div class="column is-10">
@@ -400,6 +406,21 @@
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+        <h2 class="title is-2" style="text-align: center;">Abstract</h2>
+        <div class="content has-text-justified">
+          <p class="abstract-text" style="font-size: 0.95rem; line-height: 1.5;">
+            While recent advances in humanoid locomotion have achieved stable walking on varied terrains, capturing the agility and adaptivity of highly dynamic human motions remains an open challenge. In particular, agile parkour in complex environments demands not only low-level robustness, but also human-like motion expressiveness, long-horizon skill composition, and perception-driven decision-making. In this paper, we present Perceptive Humanoid Parkour (PHP), a modular framework that enables humanoid robots to autonomously perform long-horizon, vision-based parkour across challenging obstacle courses. Our approach first leverages motion matching, formulated as nearest-neighbor search in a feature space, to compose retargeted atomic human skills into long-horizon kinematic trajectories. This framework enables the flexible composition and smooth transition of complex skill chains while preserving the elegance and fluidity of dynamic human motions. Next, we train motion-tracking reinforcement learning (RL) expert policies for these composed motions, and distill them into a single depth-based, multi-skill student policy, using a combination of DAgger and RL. Crucially, the combination of perception and skill composition enables autonomous, context-aware decision-making: using only onboard depth sensing and a discrete 2D velocity command, the robot selects and executes whether to step over, climb onto, vault or roll off obstacles of varying geometries and heights. We validate our framework with extensive real-world experiments on a Unitree G1 humanoid robot, demonstrating highly dynamic parkour skills such as climbing tall obstacles up to 1.25m (96% robot height), as well as long-horizon multi-obstacle traversal with closed-loop adaptation to real-time obstacle perturbations.
+           
+          </p>
+        </div>
+        <div style="text-align: center;">
+          <img src="./static/images/fig2_method.png" class="interpolation-image" style="width: 75%; height: auto;"/>
+        </div>
   </div>
 </section>
 

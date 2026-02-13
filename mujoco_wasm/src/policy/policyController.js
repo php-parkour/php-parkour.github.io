@@ -309,7 +309,7 @@ export class PolicyController {
 
     this.joystickState = new Float32Array(15);
     this.pressedKeys = new Set();
-    this.shiftPressed = false;
+    this.highSpeedMode = true;
     this._keyboardBound = false;
     this._debugStep = 0;
 
@@ -355,7 +355,7 @@ export class PolicyController {
     const updateState = () => {
       const arr = new Float32Array(15);
 
-      const isShift = this.shiftPressed;
+      const isHighSpeed = this.highSpeedMode;
       const isW = this.pressedKeys.has('w');
       const isA = this.pressedKeys.has('a');
       const isD = this.pressedKeys.has('d');
@@ -377,7 +377,7 @@ export class PolicyController {
             baseCmd = 5;
         }
 
-        if (baseCmd !== 0 && isShift) {
+        if (baseCmd !== 0 && isHighSpeed) {
             if (baseCmd === 1) commandIdx = 6;
             else if (baseCmd === 2) commandIdx = 7;
             else if (baseCmd === 3) commandIdx = 8;
@@ -397,8 +397,8 @@ export class PolicyController {
     };
 
     window.addEventListener('keydown', (event) => {
-      if (event.key === 'Shift') {
-        this.shiftPressed = true;
+      if ((event.key === 'y' || event.key === 'Y') && !event.repeat) {
+        this.highSpeedMode = !this.highSpeedMode;
       }
       if (event.key && event.key.length === 1) {
         this.pressedKeys.add(event.key.toLowerCase());
@@ -407,9 +407,6 @@ export class PolicyController {
     });
 
     window.addEventListener('keyup', (event) => {
-      if (event.key === 'Shift') {
-        this.shiftPressed = false;
-      }
       if (event.key && event.key.length === 1) {
         this.pressedKeys.delete(event.key.toLowerCase());
       }
@@ -418,7 +415,6 @@ export class PolicyController {
 
     window.addEventListener('blur', () => {
       this.pressedKeys.clear();
-      this.shiftPressed = false;
       updateState();
     });
 

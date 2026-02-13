@@ -362,14 +362,29 @@
             </body>
         </body>
         <body name="terrain_boxes">
-            <geom name="terrain_box_2" type="box" size="0.5 0.5 0.19" pos="5 0 0.19" rgba="0.2 0.6 0.2 0.4" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
-            <geom name="terrain_box_3" type="box" size="0.5 0.5 0.29" pos="10 0 0.29" rgba="0.2 0.6 0.2 0.4" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
-            <geom name="terrain_box_4" type="box" size="0.5 0.5 0.38" pos="15 0 0.38" rgba="0.2 0.6 0.2 0.4" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
-            <geom name="terrain_box_5" type="box" size="0.5 0.5 0.46" pos="20 0 0.46" rgba="0.2 0.6 0.2 0.4" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_2" type="box" size="0.5 0.75 0.19" pos="5 0 0.19" euler="0 0 0.3" rgba="0.2 0.5 0.9 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_3" type="box" size="0.5 0.75 0.29" pos="10 0 0.29" euler="0 0 -0.14" rgba="0.2 0.8 0.4 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_4" type="box" size="0.5 0.75 0.38" pos="15 0 0.38" euler="0 0 -0.23" rgba="0.95 0.75 0.2 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_5" type="box" size="0.5 0.75 0.46" pos="20 0 0.46" euler="0 0 0.1" rgba="0.9 0.3 0.3 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_6" type="box" size="0.5 0.75 0.19" pos="25 0 0.19" euler="0 0 -0.56" rgba="0.2 0.5 0.9 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_7" type="box" size="0.5 0.75 0.29" pos="30 0 0.29" euler="0 0 0.30" rgba="0.2 0.8 0.4 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_8" type="box" size="0.5 0.75 0.38" pos="35 0 0.38" euler="0 0 0.22" rgba="0.95 0.75 0.2 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_9" type="box" size="0.5 0.75 0.46" pos="40 0 0.46" euler="0 0 -0.14" rgba="0.9 0.3 0.3 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_10" type="box" size="0.5 0.75 0.19" pos="45 0 0.19" euler="0 0 0.47" rgba="0.2 0.5 0.9 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_11" type="box" size="0.5 0.75 0.29" pos="50 0 0.29" euler="0 0 -0.37" rgba="0.2 0.8 0.4 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_12" type="box" size="0.5 0.75 0.38" pos="55 0 0.38" euler="0 0 0.16" rgba="0.95 0.75 0.2 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+            <geom name="terrain_box_13" type="box" size="0.5 0.75 0.46" pos="60 0 0.46" euler="0 0 -0.16" rgba="0.9 0.3 0.3 1" contype="1" conaffinity="1" friction="1 0.005 0.0001" />
+        </body>
+        <body name="finish_marker">
+            <geom name="finish_post_left" type="box" size="0.08 0.08 0.82" pos="66 -0.95 0.82" rgba="1 0.85 0.2 1" contype="0" conaffinity="0"/>
+            <geom name="finish_post_right" type="box" size="0.08 0.08 0.82" pos="66 0.95 0.82" rgba="1 0.85 0.2 1" contype="0" conaffinity="0"/>
+            <geom name="finish_top_bar" type="box" size="0.08 1.1 0.08" pos="66 0 1.72" rgba="1 0.25 0.25 1" contype="0" conaffinity="0"/>
+            <geom name="finish_panel" type="box" size="0.02 0.75 0.20" pos="66.1 0 1.35" rgba="0.1 0.1 0.1 0.9" contype="0" conaffinity="0"/>
+            <site name="finish_glow" type="sphere" pos="66 0 1.35" size="0.10" rgba="1 0.95 0.3 1"/>
         </body>
 
         <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
-        <geom name="floor" pos="0 0 0" size="0 0 0.01" type="plane" material="groundplane" contype="1" conaffinity="1"/>
+        <geom name="floor" pos="0 0 0" size="0 0 .05" type="plane" material="grid" condim="3" contype="1" conaffinity="1"/>
 
     </worldbody>
 
@@ -471,9 +486,8 @@
 
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
-        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-                 markrgb="0.8 0.8 0.8" width="300" height="300"/>
-        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+        <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
+        <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2"/>
     </asset>
 
 </mujoco>

@@ -34,11 +34,11 @@ export function setupGUI(parentContext) {
   // Add scene selection dropdown.
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, 'scene', {
-    "Humanoid": "humanoid.xml", "Cassie": "agility_cassie/scene.xml",
-    "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
-    "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
+    // "Humanoid": "humanoid.xml", "Cassie": "agility_cassie/scene.xml",
+    // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
+    // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
     "G1 Terrain": "g1_with_terrain.xml",
-    "Torture Model": "model.xml", "Flex": "flex.xml", "Car": "car.xml", 
+    // "Torture Model": "model.xml", "Flex": "flex.xml", "Car": "car.xml", 
   }).name('Example Scene').onChange(reload);
 
   // Add a help menu.
@@ -168,7 +168,7 @@ export function setupGUI(parentContext) {
   keyInnerHTML += 'Space<br>';
 
   // Toggle raw depth inset rendering.
-  simulationFolder.add(parentContext.params, 'showRawDepth').name('Show Raw Depth');
+  // simulationFolder.add(parentContext.params, 'showRawDepth').name('Show Raw Depth');
 
   // Add reload model button.
   // Parameters:
@@ -182,84 +182,7 @@ export function setupGUI(parentContext) {
   actionInnerHTML += 'Reload XML<br>';
   keyInnerHTML += 'Ctrl L<br>';
 
-  // Add reset simulation button.
-  // Parameters:
-  //  Under "Simulation" folder.
-  //  Name: "Reset".
-  //  When pressed, resets the simulation to the initial state.
-  //  Can also be triggered by pressing backspace.
-  const resetSimulation = () => {
-    if (typeof parentContext.applySceneInitialState === 'function') {
-      parentContext.applySceneInitialState({ resetData: true, rebindCameras: true });
-    } else {
-      parentContext.mujoco.mj_resetData(parentContext.model, parentContext.data);
-      parentContext.mujoco.mj_forward(parentContext.model, parentContext.data);
-    }
-  };
-  simulationFolder.add({reset: () => { resetSimulation(); }}, 'reset').name('Reset');
-  document.addEventListener('keydown', (event) => {
-    if (event.code === 'Backspace') { resetSimulation(); event.preventDefault(); }});
-  actionInnerHTML += 'Reset simulation<br>';
-  keyInnerHTML += 'Backspace<br>';
 
-  // Add keyframe slider.
-  let nkeys = parentContext.model.nkey;
-  let keyframeGUI = simulationFolder.add(parentContext.params, "keyframeNumber", 0, nkeys - 1, 1).name('Load Keyframe').listen();
-  keyframeGUI.onChange((value) => {
-    if (value < parentContext.model.nkey) {
-      parentContext.data.qpos.set(parentContext.model.key_qpos.slice(
-        value * parentContext.model.nq, (value + 1) * parentContext.model.nq)); }});
-  parentContext.updateGUICallbacks.push((model, data, params) => {
-    let nkeys = parentContext.model.nkey;
-    console.log("new model loaded. has " + nkeys + " keyframes.");
-    if (nkeys > 0) {
-      keyframeGUI.max(nkeys - 1);
-      keyframeGUI.domElement.style.opacity = 1.0;
-    } else {
-      // Disable keyframe slider if no keyframes are available.
-      keyframeGUI.max(0);
-      keyframeGUI.domElement.style.opacity = 0.5;
-    }
-  });
-
-  // Add sliders for ctrlnoiserate and ctrlnoisestd; min = 0, max = 2, step = 0.01.
-  simulationFolder.add(parentContext.params, 'ctrlnoiserate', 0.0, 2.0, 0.01).name('Noise rate' );
-  simulationFolder.add(parentContext.params, 'ctrlnoisestd' , 0.0, 2.0, 0.01).name('Noise scale');
-  if (typeof parentContext.params.policyEnabled === 'boolean') {
-    simulationFolder.add(parentContext.params, 'policyEnabled').name('Policy enabled');
-  }
-
-  let textDecoder = new TextDecoder("utf-8");
-  let nullChar    = textDecoder.decode(new ArrayBuffer(1));
-
-  // Add actuator sliders.
-  let actuatorFolder = simulationFolder.addFolder("Actuators");
-  const addActuators = (model, data, params) => {
-    let act_range = model.actuator_ctrlrange;
-    let actuatorGUIs = [];
-    for (let i = 0; i < model.nu; i++) {
-      if (!model.actuator_ctrllimited[i]) { continue; }
-      let name = textDecoder.decode(
-        parentContext.model.names.subarray(
-          parentContext.model.name_actuatoradr[i])).split(nullChar)[0];
-
-      parentContext.params[name] = 0.0;
-      let actuatorGUI = actuatorFolder.add(parentContext.params, name, act_range[2 * i], act_range[2 * i + 1], 0.01).name(name).listen();
-      actuatorGUIs.push(actuatorGUI);
-      actuatorGUI.onChange((value) => {
-        data.ctrl[i] = value;
-      });
-    }
-    return actuatorGUIs;
-  };
-  let actuatorGUIs = addActuators(parentContext.model, parentContext.data, parentContext.params);
-  parentContext.updateGUICallbacks.push((model, data, params) => {
-    for (let i = 0; i < actuatorGUIs.length; i++) {
-      actuatorGUIs[i].destroy();
-    }
-    actuatorGUIs = addActuators(model, data, parentContext.params);
-  });
-  actuatorFolder.close();
 
   // Add function that resets the camera to the default position.
   // Can be triggered by pressing ctrl + A.
@@ -530,6 +453,17 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
         }
       }
 
+      // Force distinct colors for each terrain box height in the parkour demo.
+      const terrainBoxColors = {
+        terrain_box_2: [0.2, 0.5, 0.9, 1.0],   // blue
+        terrain_box_3: [0.2, 0.8, 0.4, 1.0],   // green
+        terrain_box_4: [0.95, 0.75, 0.2, 1.0], // yellow
+        terrain_box_5: [0.9, 0.3, 0.3, 1.0],   // red
+      };
+      if (Object.prototype.hasOwnProperty.call(terrainBoxColors, geomName)) {
+        color = terrainBoxColors[geomName];
+      }
+
       const usesByteColor = color[0] > 1.0 || color[1] > 1.0 || color[2] > 1.0 || color[3] > 1.0;
       const colorScale = usesByteColor ? 1.0 / 255.0 : 1.0;
       const alpha = usesByteColor ? color[3] / 255.0 : color[3];
@@ -548,7 +482,16 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
 
       let mesh;// = new THREE.Mesh();
       if (type == 0) {
-        mesh = new Reflector( new THREE.PlaneGeometry( 100, 100 ), { clipBias: 0.003, texture: texture } );
+        const basePlaneSize = 10;
+        const enlargedPlaneSize = 300;
+        const repeatScale = enlargedPlaneSize / basePlaneSize;
+        if (texture) {
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(texture.repeat.x * repeatScale, texture.repeat.y * repeatScale);
+          texture.needsUpdate = true;
+        }
+        mesh = new Reflector( new THREE.PlaneGeometry( enlargedPlaneSize, enlargedPlaneSize ), { clipBias: 0.003, texture: texture } );
         mesh.rotateX( - Math.PI / 2 );
       } else {
         mesh = new THREE.Mesh(geometry, currentMaterial);
@@ -559,9 +502,12 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
       mesh.bodyID = b;
       // Make everything visible to depth camera except head_link.
       mesh.layers.enable(1);
-      if (geomName === "head_link" || meshName === "head_link") {
+      const isFinishMarker = geomName.startsWith("finish_") || (bodies[b] && bodies[b].name === "finish_marker");
+      if (geomName === "head_link" || meshName === "head_link" || isFinishMarker) {
         mesh.layers.disable(1);
-        parent.headLinkMesh = mesh;
+        if (geomName === "head_link" || meshName === "head_link") {
+          parent.headLinkMesh = mesh;
+        }
       }
       bodies[b].add(mesh);
       getPosition  (model.geom_pos, g, mesh.position  );

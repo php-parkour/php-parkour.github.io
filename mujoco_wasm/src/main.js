@@ -42,9 +42,39 @@ export class MuJoCoDemo {
       -0.00628881808, 0.161155701, 0.236345276, 0.980316162, 0.15456377, 0.0774896815, 0.0205286704, -0.128641531,
       -0.0847690701, -0.255017966, 1.09530210, -0.134532213, 0.0875737667, 0.0601755157
     ];
+    this.finishLineX = 63.0;
+    this.finishMessageShown = false;
 
     this.container = document.createElement( 'div' );
     document.body.appendChild( this.container );
+    this.finishMessageElement = document.createElement('div');
+    this.finishMessageElement.textContent = 'Congrats! You reached the end!';
+    this.finishMessageElement.style.position = 'absolute';
+    this.finishMessageElement.style.top = '22px';
+    this.finishMessageElement.style.left = '50%';
+    this.finishMessageElement.style.transform = 'translateX(-50%)';
+    this.finishMessageElement.style.padding = '10px 16px';
+    this.finishMessageElement.style.borderRadius = '10px';
+    this.finishMessageElement.style.background = 'rgba(0, 0, 0, 0.65)';
+    this.finishMessageElement.style.color = '#ffe16a';
+    this.finishMessageElement.style.font = 'bold 24px Arial';
+    this.finishMessageElement.style.letterSpacing = '0.4px';
+    this.finishMessageElement.style.display = 'none';
+    this.finishMessageElement.style.zIndex = '1200';
+    document.body.appendChild(this.finishMessageElement);
+    this.speedModeElement = document.createElement('div');
+    this.speedModeElement.style.position = 'absolute';
+    this.speedModeElement.style.top = '16px';
+    this.speedModeElement.style.left = '16px';
+    this.speedModeElement.style.padding = '8px 12px';
+    this.speedModeElement.style.borderRadius = '8px';
+    this.speedModeElement.style.background = 'rgba(0, 0, 0, 0.60)';
+    this.speedModeElement.style.color = '#ffffff';
+    this.speedModeElement.style.font = 'bold 16px Arial';
+    this.speedModeElement.style.letterSpacing = '0.2px';
+    this.speedModeElement.style.zIndex = '1200';
+    document.body.appendChild(this.speedModeElement);
+    this.updateSpeedModeIndicator();
 
     this.scene = new THREE.Scene();
     this.scene.name = 'scene';
@@ -75,23 +105,12 @@ export class MuJoCoDemo {
     this.scene.add(this.depthCameraView);
     this.depthCameraPoseViz = new THREE.Group();
     this.depthCameraPoseViz.name = 'DepthCameraPoseViz';
-    this.depthCameraAxes = new THREE.AxesHelper(0.16);
-    this.depthCameraPoseViz.add(this.depthCameraAxes);
-    this.depthCameraForwardArrow = new THREE.ArrowHelper(
-      new THREE.Vector3(0, 0, -1), // three.js camera forward direction
-      new THREE.Vector3(0, 0, 0),
-      0.20,
-      0xffe066
-    );
-    this.depthCameraPoseViz.add(this.depthCameraForwardArrow);
     this.depthCameraMarker = new THREE.Mesh(
       new THREE.SphereGeometry(0.02, 20, 20),
       new THREE.MeshBasicMaterial({ color: 0xff4d9d })
     );
     this.depthCameraPoseViz.add(this.depthCameraMarker);
     this.depthCameraView.add(this.depthCameraPoseViz);
-    this.depthCameraFrustumHelper = new THREE.CameraHelper(this.depthCameraView);
-    this.scene.add(this.depthCameraFrustumHelper);
 
     this.scene.background = new THREE.Color(0.15, 0.25, 0.35);
     // Fog: (color, near, far). Increase far so distant terrain stays visible.
@@ -117,6 +136,19 @@ export class MuJoCoDemo {
     this.spotlight.target = targetObject;
     targetObject.position.set(0, 1, 0);
     this.scene.add( this.spotlight );
+
+    // Extra fill lights for clearer scene visibility.
+    this.hemiLight = new THREE.HemisphereLight(0xbfd8ff, 0x1f2a3a, 0.35 * 2.0);
+    this.hemiLight.position.set(0, 6, 0);
+    this.scene.add(this.hemiLight);
+
+    this.fillLightLeft = new THREE.DirectionalLight(0xffffff, 0.28 * 2.0);
+    this.fillLightLeft.position.set(-4, 3, 2);
+    this.scene.add(this.fillLightLeft);
+
+    this.fillLightRight = new THREE.DirectionalLight(0xffffff, 0.22 * 2.0);
+    this.fillLightRight.position.set(4, 2.5, -1.5);
+    this.scene.add(this.fillLightRight);
 
     this.renderer = new THREE.WebGLRenderer( { antialias: true } );
     this.renderer.setPixelRatio(1.0);////window.devicePixelRatio );
@@ -358,6 +390,32 @@ export class MuJoCoDemo {
     }
   }
 
+  setFinishMessageVisible(visible) {
+    if (!this.finishMessageElement) {
+      return;
+    }
+    this.finishMessageElement.style.display = visible ? 'block' : 'none';
+  }
+
+  updateSpeedModeIndicator() {
+    if (!this.speedModeElement) {
+      return;
+    }
+    const isHighSpeed = this.policyController ? this.policyController.highSpeedMode !== false : true;
+    this.speedModeElement.textContent = `Speed: ${isHighSpeed ? 'HIGH' : 'LOW'} (Y to toggle)`;
+  }
+
+  checkCourseCompletion() {
+    if (this.params.scene !== initialScene || !this.pelvisBody) {
+      return;
+    }
+    if (!this.finishMessageShown && this.pelvisBody.position.x >= this.finishLineX) {
+      this.finishMessageShown = true;
+      this.setFinishMessageVisible(true);
+      console.log('Congrats! Reached end of course.');
+    }
+  }
+
   applySceneInitialState({ resetData = false, rebindCameras = false } = {}) {
     if (!this.model || !this.data) {
       return;
@@ -390,6 +448,8 @@ export class MuJoCoDemo {
       this.policyController.reset();
     }
     this.policyStepCounter = 0;
+    this.finishMessageShown = false;
+    this.setFinishMessageVisible(false);
   }
 
   async initPolicy() {
@@ -436,7 +496,6 @@ export class MuJoCoDemo {
     this.depthInferenceTarget.setSize(this.depthCameraConfig.width, this.depthCameraConfig.height);
     this.depthCameraView.aspect = this.depthCameraConfig.width / this.depthCameraConfig.height;
     this.depthCameraView.updateProjectionMatrix();
-    this.depthCameraFrustumHelper.update();
     this.depthPixels = new Float32Array(this.depthCameraConfig.width * this.depthCameraConfig.height * 4);
     this.depthFrame = new Float32Array(this.depthCameraConfig.width * this.depthCameraConfig.height);
   }
@@ -446,6 +505,7 @@ export class MuJoCoDemo {
     if (!this.model || !this.data) {
       return;
     }
+    this.updateSpeedModeIndicator();
     this.controls.update();
 
     if (!this.params["paused"]) {
@@ -547,6 +607,7 @@ export class MuJoCoDemo {
       this.controls.target.copy(this.pelvisBody.position);
       this.controls.update();
     }
+    this.checkCourseCompletion();
 
 
 
@@ -561,7 +622,6 @@ export class MuJoCoDemo {
 
     // Draw Tendons and Flex verts
     drawTendonsAndFlex(this.mujocoRoot, this.model, this.data);
-    this.depthCameraFrustumHelper.update();
     this.depthViewMaterial.uniforms.cameraNear.value = this.depthCameraView.near;
     this.depthViewMaterial.uniforms.cameraFar.value = this.depthCameraView.far;
 
