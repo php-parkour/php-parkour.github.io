@@ -117,70 +117,6 @@
   </div>
 </section>
 
-<!-- Interactive MuJoCo Demo -->
-<section class="section interactive-demo-section" style="background-color: #f8f9fa;">
-  <div class="container">
-    <h2 class="title is-2" style="text-align: center; margin-bottom: 2rem;">Interactive Demo</h2>
-    <p class="has-text-centered" style="font-size: 1.2rem; margin-bottom: 1rem; color: #666;">
-      Explore the PHP policy in a real-time MuJoCo simulation running fully in your browser.
-    </p>
-    <p class="has-text-centered" style="font-size: 1.0rem; margin-bottom: 2rem; color: #666;">
-      The demo may take a few seconds to load as models and assets are streamed.
-    </p>
-    <div class="has-text-centered" style="margin-bottom: 2rem;">
-      <a class="button is-link is-rounded" href="./demo.html">Open the interactive demo page</a>
-    </div>
-
-    <div class="columns is-centered">
-      <div class="column is-10">
-        <div class="demo-display-container" style="box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); border-radius: 10px; overflow: hidden; position: relative;">
-          <iframe
-            src="./mujoco_wasm/dist-desktop/index.html"
-            loading="lazy"
-            style="width: 100%; height: 600px; border: none;"
-            title="PHP MuJoCo Web Demo">
-            Your browser does not support iframes.
-          </iframe>
-          <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); padding: 0.65rem 1rem; border-radius: 999px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); max-width: 900px;">
-            <div style="font-size: 0.95rem; line-height: 1.5; color: #0f172a; text-align: center; white-space: nowrap;">
-              💡 Hold ONLY <kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: bold;">W</kbd>  when approaching and over obstacles · Tap <kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px;">A</kbd>/<kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px;">D</kbd> to align            </div>
-          </div>
-          <div style="position: absolute; right: 16px; bottom: 16px; background: rgba(255, 255, 255, 0.92); padding: 1rem 1.25rem; border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); max-width: 380px;">
-            <h3 class="title is-5" style="margin-bottom: 0.6rem; color: #333;">🎮 How to Play</h3>
-            <div style="font-size: 0.9rem; line-height: 1.5; color: #444;">
-              <div style="font-weight: 700; margin-bottom: 0.5rem;">Controls</div>
-              <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.45rem 0.8rem; align-items: center;">
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">W</kbd>
-                <span>Move forward</span>
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">A</kbd>
-                <span>Turn left</span>
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">D</kbd>
-                <span>Turn right</span>
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">Climb</kbd>
-                <span>Automatic when pressing <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">W</kbd></span>
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">Y</kbd>
-                <span>Toggle speed mode</span>
-                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">SPACE</kbd>
-                <span>Pause</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="has-text-centered" style="margin-top: 1.5rem; padding: 1rem; background-color: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
-      <div style="font-size: 0.95rem; line-height: 1.6; color: #555; max-width: 900px; margin: 0 auto;">
-        <p style="font-style: italic; color: #444; font-size: 0.9rem; margin: 0;">
-          <strong>💡 Tips:</strong>
-          <br>1️⃣ When you spot an obstacle, hold <kbd style="background: #fff3cd; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: bold;">W</kbd> from the moment you approach it until you’ve completely cleared it. Don’t let go and don’t spam other keys.
-          <br>2️⃣ In the gaps between obstacles, you can quickly tap <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">A</kbd> / <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">D</kbd> to fine‑tune your direction, or press <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">Y</kbd> to switch between low and high speed and find your favorite rhythm.
-          <br>3️⃣ If you crash, drift off course, or just want another run, hit the Reload button to instantly restart a new run.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
   <section class="hero">
     <div class="hero-body">
       <div class="container is-fullhd">
@@ -315,6 +251,69 @@
 </section> -->
 
 
+<!-- Interactive MuJoCo Demo -->
+<section class="section interactive-demo-section">
+  <div class="container">
+    <h2 class="title is-2" style="text-align: center; margin-bottom: 2rem;">Interactive Demo</h2>
+    <p class="has-text-centered" style="font-size: 1.2rem; margin-bottom: 1rem; color: #666;">
+      Explore the PHP policy in a real-time MuJoCo simulation running fully in your browser.
+    </p>
+    <p class="has-text-centered" style="font-size: 1.0rem; margin-bottom: 2rem; color: #666;">
+      The demo may take a few seconds to load as models and assets are streamed.
+    </p>
+    <div class="has-text-centered" style="margin-bottom: 2rem;">
+      <a class="button is-link is-rounded" href="./demo.html">Open the interactive demo page</a>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-10">
+        <div class="demo-display-container" style="box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); border-radius: 10px; overflow: hidden; position: relative;">
+          <iframe
+            src="./mujoco_wasm/dist-desktop/index.html"
+            loading="lazy"
+            style="width: 100%; height: 600px; border: none;"
+            title="PHP MuJoCo Web Demo">
+            Your browser does not support iframes.
+          </iframe>
+          <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); padding: 0.65rem 1rem; border-radius: 999px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); max-width: 900px;">
+            <div style="font-size: 0.95rem; line-height: 1.5; color: #0f172a; text-align: center; white-space: nowrap;">
+              💡 Hold ONLY <kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: bold;">W</kbd>  when approaching and over obstacles · Tap <kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px;">A</kbd>/<kbd style="background: #fff3cd; padding: 0.15rem 0.45rem; border-radius: 4px;">D</kbd> to align            </div>
+          </div>
+          <div style="position: absolute; right: 16px; bottom: 16px; background: rgba(255, 255, 255, 0.92); padding: 1rem 1.25rem; border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); max-width: 380px;">
+            <h3 class="title is-5" style="margin-bottom: 0.6rem; color: #333;">🎮 How to Play</h3>
+            <div style="font-size: 0.9rem; line-height: 1.5; color: #444;">
+              <div style="font-weight: 700; margin-bottom: 0.5rem;">Controls</div>
+              <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.45rem 0.8rem; align-items: center;">
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">W</kbd>
+                <span>Move forward</span>
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">A</kbd>
+                <span>Turn left</span>
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">D</kbd>
+                <span>Turn right</span>
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">Climb</kbd>
+                <span>Autonomous when pressing <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">W</kbd></span>
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">Y</kbd>
+                <span>Toggle speed mode</span>
+                <kbd style="background: #f0f0f0; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: bold; justify-self: start;">SPACE</kbd>
+                <span>Pause</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="has-text-centered" style="margin-top: 0.75rem;">
+      <div style="font-size: 0.95rem; line-height: 1.6; color: #555; max-width: 900px; margin: 0 auto;">
+        <p style="font-style: italic; color: #444; font-size: 0.9rem; margin: 0;">
+          <strong>💡 Tips:</strong>
+          <br>1️⃣ When close to an obstacle, keep pressing <kbd style="background: #fff3cd; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: bold;">W</kbd> to autonomously climb and clear it. Don’t let go and don’t press other keys.
+          <br>2️⃣ When running, tap <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">A</kbd> / <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">D</kbd> to align with the next obstacle, or press <kbd style="background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 4px;">Y</kbd> to switch between low and high speed and find your rhythm!
+          <br>3️⃣ If the robot fails or drifts off course, hit the Reload button to restart a new run.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="section">
   <div class="container">
