@@ -533,6 +533,15 @@ export class MuJoCoDemo {
     this.updateSpeedModeIndicator();
     this.controls.update();
 
+    // Auto-forward when robot is near terrain boxes (climbing zones)
+    if (this.policyController && this.params.policyEnabled && this.params.scene === initialScene) {
+      const pelvisX = this.data.qpos[0];
+      const boxXPositions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+      const nearBox = boxXPositions.some(bx => pelvisX >= bx - 1.5 && pelvisX <= bx + 1.0);
+      this.policyController.autoForward = nearBox;
+      this.policyController._updateCommandState();
+    }
+
     if (!this.params["paused"]) {
       let timestep = this.model.opt.timestep;
       if (timeMS - this.mujoco_time > 35.0) { this.mujoco_time = timeMS; }

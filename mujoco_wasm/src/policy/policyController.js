@@ -313,6 +313,8 @@ export class PolicyController {
     this._keyboardBound = false;
     this._debugStep = 0;
 
+    this.autoForward = false;
+
     this.isReady = false;
     this.inFlight = false;
   }
@@ -346,55 +348,54 @@ export class PolicyController {
     this.depthLatentQueue = [];
   }
 
+  _updateCommandState() {
+    const arr = new Float32Array(15);
+
+    const isHighSpeed = this.highSpeedMode;
+    const isW = this.pressedKeys.has('w') || this.autoForward;
+    const isA = this.pressedKeys.has('a');
+    const isD = this.pressedKeys.has('d');
+    const isQ = this.pressedKeys.has('q');
+    const isE = this.pressedKeys.has('e');
+
+    let commandIdx = 0;
+    let baseCmd = 0;
+    if ((isW && isA) || isQ) {
+        baseCmd = 2;
+    } else if ((isW && isD) || isE) {
+        baseCmd = 4;
+    } else if (isW) {
+        baseCmd = 1;
+    } else if (isA) {
+        baseCmd = 3;
+    } else if (isD) {
+        baseCmd = 5;
+    }
+
+    if (baseCmd !== 0 && isHighSpeed) {
+        if (baseCmd === 1) commandIdx = 6;
+        else if (baseCmd === 2) commandIdx = 7;
+        else if (baseCmd === 3) commandIdx = 8;
+        else if (baseCmd === 4) commandIdx = 9;
+        else if (baseCmd === 5) commandIdx = 10;
+    } else {
+        commandIdx = baseCmd;
+    }
+
+    if (commandIdx === 0) {
+      arr[0] = 1;
+    } else {
+      arr[commandIdx] = 1;
+    }
+
+    this.joystickState = arr;
+  }
+
   _bindKeyboard() {
     if (this._keyboardBound) {
       return;
     }
     this._keyboardBound = true;
-
-    const updateState = () => {
-      const arr = new Float32Array(15);
-
-      const isHighSpeed = this.highSpeedMode;
-      const isW = this.pressedKeys.has('w');
-      const isA = this.pressedKeys.has('a');
-      const isD = this.pressedKeys.has('d');
-      const isQ = this.pressedKeys.has('q');
-      const isE = this.pressedKeys.has('e');
-      const isR = this.pressedKeys.has('r');
-
-      let commandIdx = 0;
-        let baseCmd = 0;
-        if ((isW && isA) || isQ) {
-            baseCmd = 2;
-        } else if ((isW && isD) || isE) {
-            baseCmd = 4;
-        } else if (isW) {
-            baseCmd = 1;
-        } else if (isA) {
-            baseCmd = 3;
-        } else if (isD) {
-            baseCmd = 5;
-        }
-
-        if (baseCmd !== 0 && isHighSpeed) {
-            if (baseCmd === 1) commandIdx = 6;
-            else if (baseCmd === 2) commandIdx = 7;
-            else if (baseCmd === 3) commandIdx = 8;
-            else if (baseCmd === 4) commandIdx = 9;
-            else if (baseCmd === 5) commandIdx = 10;
-        } else {
-            commandIdx = baseCmd;
-        }
-
-      if (commandIdx === 0) {
-        arr[0] = 1;
-      } else {
-        arr[commandIdx] = 1;
-      }
-
-      this.joystickState = arr;
-    };
 
     window.addEventListener('keydown', (event) => {
       if ((event.key === 'y' || event.key === 'Y') && !event.repeat) {
@@ -403,22 +404,22 @@ export class PolicyController {
       if (event.key && event.key.length === 1) {
         this.pressedKeys.add(event.key.toLowerCase());
       }
-      updateState();
+      this._updateCommandState();
     });
 
     window.addEventListener('keyup', (event) => {
       if (event.key && event.key.length === 1) {
         this.pressedKeys.delete(event.key.toLowerCase());
       }
-      updateState();
+      this._updateCommandState();
     });
 
     window.addEventListener('blur', () => {
       this.pressedKeys.clear();
-      updateState();
+      this._updateCommandState();
     });
 
-    updateState();
+    this._updateCommandState();
   }
 
   async _initOrt() {
