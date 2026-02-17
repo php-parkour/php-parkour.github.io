@@ -109,6 +109,14 @@ export class MuJoCoDemo {
       this.speedControlsContainer.appendChild(this.speedToggleButton);
       this.speedControlsContainer.appendChild(this.resetButton);
     }
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Backspace') {
+        if (typeof this.reloadScene === 'function') {
+          this.reloadScene();
+        }
+        event.preventDefault();
+      }
+    });
     document.body.appendChild(this.speedControlsContainer);
     this.updateSpeedModeIndicator();
 
