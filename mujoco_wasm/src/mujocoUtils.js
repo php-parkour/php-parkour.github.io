@@ -251,6 +251,8 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
     let mujocoRoot = new THREE.Group();
     mujocoRoot.name = "MuJoCo Root";
     parent.scene.add(mujocoRoot);
+    parent.terrainObstacleMeshes = new Map();
+    parent.highlightedObstacleName = null;
 
     /** @type {Object.<number, THREE.Group>} */
     let bodies = {};
@@ -518,6 +520,29 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
       mesh.castShadow = g == 0 ? false : true;
       mesh.receiveShadow = type != 7;
       mesh.bodyID = b;
+      mesh.name = geomName || meshName || `geom_${g}`;
+      mesh.userData.geomId = g;
+      mesh.userData.geomName = geomName;
+
+      if (geomName.startsWith("terrain_box_")) {
+        const outline = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geometry),
+          new THREE.LineBasicMaterial({
+            color: 0xffd95a,
+            transparent: true,
+            opacity: 0.0,
+            depthTest: false,
+          }),
+        );
+        outline.name = `${geomName}_highlight`;
+        outline.visible = false;
+        outline.renderOrder = 1000;
+        outline.scale.setScalar(1.04);
+        mesh.add(outline);
+        mesh.userData.highlightOutline = outline;
+        parent.terrainObstacleMeshes.set(geomName, mesh);
+      }
+
       // Make everything visible to depth camera except head_link.
       mesh.layers.enable(1);
       const isFinishMarker = geomName.startsWith("finish_") || (bodies[b] && bodies[b].name === "finish_marker");
@@ -840,4 +865,3 @@ export function toMujocoPos(target) { return target.set(target.x, -target.z, tar
 export function standardNormal() {
   return Math.sqrt(-2.0 * Math.log( Math.random())) *
          Math.cos ( 2.0 * Math.PI * Math.random()); }
-

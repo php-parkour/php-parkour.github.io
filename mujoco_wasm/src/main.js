@@ -12,6 +12,14 @@ const mujoco = await load_mujoco();
 
 // Set up Emscripten's Virtual File System
 var initialScene = "g1_with_terrain.xml";
+const terrainObstacles = Array.from({ length: 12 }, (_, index) => ({
+  name: `terrain_box_${index + 2}`,
+  x: (index + 1) * 5,
+  y: 0,
+}));
+const obstacleWarningDistance = 2.0;
+const obstacleWarningMinApproachSpeed = 0.3;
+const obstacleWarningHoldMs = 800;
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
 mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("../assets/scenes/" + initialScene)).text());
@@ -34,6 +42,10 @@ export class MuJoCoDemo {
     this.policyController = null;
     this.policyStepCounter = 0;
     this.policyDecimation = 1;
+    this.obstacleWarningActive = null;
+    this.obstacleWarningLastActiveTime = -Infinity;
+    this.obstacleWarningTargetName = null;
+    this.highlightedObstacleName = null;
     this.pelvisFollowOffset = new THREE.Vector3(-4.0, 1.5, 0.0);
     this.defaultJointPos = [
       0.162997201, -0.0361181423, -0.0214254409, 0.267154634, -0.174296871, 0.212671682,
@@ -443,6 +455,75 @@ export class MuJoCoDemo {
     this.speedModeElement.textContent = `Speed: ${isHighSpeed ? 'HIGH' : 'LOW'}`;
   }
 
+  updateObstacleWarning() {
+    const isTerrainScene = this.params.scene === initialScene;
+    const pelvisX = this.data.qpos[0];
+    const pelvisY = this.data.qpos[1];
+    const velocityX = this.data.qvel[0];
+    const velocityY = this.data.qvel[1];
+    const now = performance.now();
+
+    let target = null;
+    if (isTerrainScene) {
+      for (const obstacle of terrainObstacles) {
+        const deltaX = obstacle.x - pelvisX;
+        const deltaY = obstacle.y - pelvisY;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (distance <= 1e-6 || distance > obstacleWarningDistance) {
+          continue;
+        }
+
+        const approachSpeed = (velocityX * deltaX + velocityY * deltaY) / distance;
+        if (approachSpeed <= obstacleWarningMinApproachSpeed) {
+          continue;
+        }
+
+        if (!target || distance < target.distance) {
+          target = { ...obstacle, distance };
+        }
+      }
+    }
+
+    if (target) {
+      this.obstacleWarningLastActiveTime = now;
+      this.obstacleWarningTargetName = target.name;
+    } else if (!isTerrainScene || now - this.obstacleWarningLastActiveTime >= obstacleWarningHoldMs) {
+      this.obstacleWarningTargetName = null;
+    }
+
+    const isWarningActive = this.obstacleWarningTargetName !== null;
+    this.updateObstacleHighlight(this.obstacleWarningTargetName, now);
+
+    if (isWarningActive === this.obstacleWarningActive) {
+      return;
+    }
+    this.obstacleWarningActive = isWarningActive;
+    window.parent.postMessage({
+      type: 'php-obstacle-warning',
+      active: isWarningActive,
+      target: this.obstacleWarningTargetName,
+    }, window.location.origin);
+  }
+
+  updateObstacleHighlight(targetName, timeMS) {
+    if (targetName !== this.highlightedObstacleName) {
+      const previousMesh = this.terrainObstacleMeshes?.get(this.highlightedObstacleName);
+      if (previousMesh) {
+        previousMesh.userData.highlightOutline.visible = false;
+      }
+      this.highlightedObstacleName = targetName;
+    }
+
+    const targetMesh = this.terrainObstacleMeshes?.get(targetName);
+    if (!targetMesh) {
+      return;
+    }
+
+    const pulse = 0.5 + 0.5 * Math.sin(timeMS * 0.01);
+    targetMesh.userData.highlightOutline.visible = true;
+    targetMesh.userData.highlightOutline.material.opacity = 0.65 + pulse * 0.35;
+  }
+
   applySceneInitialState({ resetData = false, rebindCameras = false } = {}) {
     if (!this.model || !this.data) {
       return;
@@ -474,6 +555,10 @@ export class MuJoCoDemo {
     if (this.policyController && typeof this.policyController.reset === 'function') {
       this.policyController.reset();
     }
+    this.updateObstacleHighlight(null, performance.now());
+    this.obstacleWarningActive = null;
+    this.obstacleWarningLastActiveTime = -Infinity;
+    this.obstacleWarningTargetName = null;
     this.policyStepCounter = 0;
   }
 
@@ -532,15 +617,6 @@ export class MuJoCoDemo {
     }
     this.updateSpeedModeIndicator();
     this.controls.update();
-
-    // Auto-forward when robot is near terrain boxes (climbing zones)
-    if (this.policyController && this.params.policyEnabled && this.params.scene === initialScene) {
-      const pelvisX = this.data.qpos[0];
-      const boxXPositions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
-      const nearBox = boxXPositions.some(bx => pelvisX >= bx - 1.5 && pelvisX <= bx + 1.0);
-      this.policyController.autoForward = nearBox;
-      this.policyController._updateCommandState();
-    }
 
     if (!this.params["paused"]) {
       let timestep = this.model.opt.timestep;
@@ -626,6 +702,8 @@ export class MuJoCoDemo {
 
       mujoco.mj_forward(this.model, this.data);
     }
+
+    this.updateObstacleWarning();
 
     // Update body transforms.
     for (let b = 0; b < this.model.nbody; b++) {

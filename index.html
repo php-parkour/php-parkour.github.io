@@ -12,12 +12,13 @@
   <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
-  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="stylesheet" href="./static/css/index.css?v=obstacle-warning-2">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script defer src="./static/js/fontawesome.all.min.js"></script>
   <script src="./static/js/bulma-carousel.min.js"></script>
   <script src="./static/js/bulma-slider.min.js"></script>
   <script src="./static/js/index.js"></script>
+  <script defer src="./static/js/obstacle-warning.js"></script>
   <script>
     (function () {
       const isMobile = window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900;
@@ -251,7 +252,7 @@
       <div style="max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border: 2px solid #e6c84c; border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 2px 8px rgba(230, 200, 76, 0.25);">
         <p style="font-size: 1rem; line-height: 1.7; color: #333; margin: 0;">
           <strong style="font-size: 1.05rem; color: #8b6914;">💡 Tips:</strong>
-          <br>1️⃣ To climb an obstacle: first align and run toward it, then keep holding <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: bold; border: 1px solid #e6c84c;">W</kbd> during approach, climbing, on top, and descent, until you’re back on the ground.
+          <br>1️⃣ To clear an obstacle: align, run toward it, and hold <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: bold; border: 1px solid #e6c84c;">W</kbd> until you land.
           <br>2️⃣ When running, tap <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid #ddd;">A</kbd> / <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid #ddd;">D</kbd> to align with the next obstacle, or press <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid #ddd;">Y</kbd> to switch between low and high speed and find your rhythm!
           <br>3️⃣ If the robot fails or drifts off course, hit the Reload button or press <kbd style="background: #fff; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid #ddd;">BACKSPACE</kbd> to restart a new run.
         </p>
@@ -268,9 +269,10 @@
             title="PHP MuJoCo Web Demo">
             Your browser does not support iframes.
           </iframe>
-          <div style="position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: calc(100% - 32px); max-width: 1100px; background: rgba(255, 243, 205, 0.96); padding: 0.65rem 1rem; border-radius: 999px; border: 1px solid #e6c84c; box-shadow: 0 6px 18px rgba(230, 200, 76, 0.28);">
+          <div class="obstacle-warning" data-obstacle-warning style="position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: calc(100% - 32px); max-width: 1100px; background: rgba(255, 243, 205, 0.96); padding: 0.65rem 1rem; border-radius: 999px; border: 1px solid #e6c84c; box-shadow: 0 6px 18px rgba(230, 200, 76, 0.28);">
             <div style="font-size: 1.15rem; line-height: 1.45; color: #0f172a; text-align: center; white-space: normal;">
-              💡 <strong>Keep holding <kbd style="background: #fff9e6; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: bold; border: 1px solid #e6c84c;">W</kbd> during approach, climbing, on top, and descent, until you’re back on the ground!</strong>            </div>
+              💡 <strong>Hold <kbd style="background: #fff9e6; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: bold; border: 1px solid #e6c84c;">W</kbd> until you land.</strong>
+            </div>
           </div>
           <div style="position: absolute; right: 16px; bottom: 16px; background: rgba(255, 255, 255, 0.92); padding: 1rem 1.25rem; border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); max-width: 380px;">
             <h3 class="title is-5" style="margin-bottom: 0.6rem; color: #333;">🎮 How to Play</h3>

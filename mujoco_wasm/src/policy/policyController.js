@@ -313,8 +313,6 @@ export class PolicyController {
     this._keyboardBound = false;
     this._debugStep = 0;
 
-    this.autoForward = false;
-
     this.isReady = false;
     this.inFlight = false;
   }
@@ -352,7 +350,7 @@ export class PolicyController {
     const arr = new Float32Array(15);
 
     const isHighSpeed = this.highSpeedMode;
-    const isW = this.pressedKeys.has('w') || this.autoForward;
+    const isW = this.pressedKeys.has('w');
     const isA = this.pressedKeys.has('a');
     const isD = this.pressedKeys.has('d');
     const isQ = this.pressedKeys.has('q');

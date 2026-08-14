@@ -1422,3 +1422,26 @@ body {
   }
 }
 
+.obstacle-warning {
+  transition: background-color 180ms ease, border-color 180ms ease,
+    box-shadow 180ms ease, filter 180ms ease;
+}
+
+.obstacle-warning.is-active {
+  background: #ffd95a !important;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.5),
+    0 12px 28px rgba(15, 23, 42, 0.28) !important;
+  animation: obstacle-warning-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes obstacle-warning-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obstacle-warning.is-active {
+    animation: none;
+  }
+}

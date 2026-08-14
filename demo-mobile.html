@@ -7,7 +7,8 @@
   <title>Interactive Demo (Mobile) | Perceptive Humanoid Parkour</title>
 
   <link rel="stylesheet" href="./static/css/bulma.min.css">
-  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="stylesheet" href="./static/css/index.css?v=obstacle-warning-2">
+  <script defer src="./static/js/obstacle-warning.js"></script>
   <script>
     (function () {
       const isMobile = window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900;
@@ -107,9 +108,8 @@
         Your browser does not support iframes.
       </iframe>
 
-      <div class="demo-glass label-pill">
-        💡 Hold <strong>Forward</strong> to move and climb.
-        <br>Tap <strong>Left</strong>/<strong>Right</strong> to steer.
+      <div class="demo-glass label-pill obstacle-warning" data-obstacle-warning>
+        💡 Hold <strong>Forward</strong> until you land.
       </div>
 
       <div class="mobile-controls">
