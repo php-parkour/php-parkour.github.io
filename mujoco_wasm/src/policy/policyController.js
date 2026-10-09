@@ -1,4 +1,5 @@
 import * as ort from 'onnxruntime-web';
+import { RELEASE_OBSERVATIONS, preprocessDepth } from './releaseContract.js';
 
 const DEFAULT_COMMAND = [0, 0, 0];
 
@@ -262,8 +263,11 @@ const rotateVectorWithXmat = (xmat, baseIndex, vec) => {
 export class PolicyController {
   constructor(mujoco, config = {}) {
     this.mujoco = mujoco;
-    this.modelPath = config.modelPath ?? '../policy.onnx';
-    this.depthModelPath = config.depthModelPath ?? '../2026-01-09_08-35-46_student-yaw-random-10-realistic-setting_student.onnx';
+    this.modelPath = config.modelPath ?? './php-release/student.onnx';
+    this.observationLayout = config.observationLayout ?? 'php-release';
+    this.wasmPaths = config.wasmPaths;
+    this.generation = 0;
+    this.depthModelPath = config.depthModelPath ?? './php-release/depth_backbone.onnx';
     this.controlDt = config.controlDt ?? 0.02;
 
     this.session = null;
@@ -281,7 +285,7 @@ export class PolicyController {
     this.depthCrop = { top: 2, left: 4, right: 4, bottom: 0 };
     this.lastProcessedDepth = null;
     this.lastProcessedDepthSize = { width: this.depthResize.width, height: this.depthResize.height };
-    this.depthLatencySteps = 7;
+    this.depthLatencySteps = config.depthLatencySteps ?? 7;
     this.depthLatentQueue = [];
 
     this.metadata = null;
@@ -309,7 +313,7 @@ export class PolicyController {
 
     this.joystickState = new Float32Array(15);
     this.pressedKeys = new Set();
-    this.highSpeedMode = true;
+    this.highSpeedMode = config.highSpeedMode ?? true;
     this._keyboardBound = false;
     this._debugStep = 0;
 
@@ -334,6 +338,7 @@ export class PolicyController {
   }
 
   reset() {
+    this.generation += 1;
     if (!this.jointNames.length) {
       return;
     }
@@ -349,42 +354,12 @@ export class PolicyController {
   _updateCommandState() {
     const arr = new Float32Array(15);
 
-    const isHighSpeed = this.highSpeedMode;
-    const isW = this.pressedKeys.has('w');
-    const isA = this.pressedKeys.has('a');
-    const isD = this.pressedKeys.has('d');
-    const isQ = this.pressedKeys.has('q');
-    const isE = this.pressedKeys.has('e');
-
-    let commandIdx = 0;
-    let baseCmd = 0;
-    if ((isW && isA) || isQ) {
-        baseCmd = 2;
-    } else if ((isW && isD) || isE) {
-        baseCmd = 4;
-    } else if (isW) {
-        baseCmd = 1;
-    } else if (isA) {
-        baseCmd = 3;
-    } else if (isD) {
-        baseCmd = 5;
-    }
-
-    if (baseCmd !== 0 && isHighSpeed) {
-        if (baseCmd === 1) commandIdx = 6;
-        else if (baseCmd === 2) commandIdx = 7;
-        else if (baseCmd === 3) commandIdx = 8;
-        else if (baseCmd === 4) commandIdx = 9;
-        else if (baseCmd === 5) commandIdx = 10;
-    } else {
-        commandIdx = baseCmd;
-    }
-
-    if (commandIdx === 0) {
-      arr[0] = 1;
-    } else {
-      arr[commandIdx] = 1;
-    }
+    const codes = { w: 1, a: 2, q: 3, d: 4, e: 5, s: 11 };
+    const held = [...this.pressedKeys].filter((key) => key in codes);
+    const active = held.length ? held[held.length - 1] : null;
+    let code = active ? codes[active] : 0;
+    if (this.highSpeedMode && code >= 1 && code <= 5) code += 5;
+    arr[code] = 1;
 
     this.joystickState = arr;
   }
@@ -396,7 +371,7 @@ export class PolicyController {
     this._keyboardBound = true;
 
     window.addEventListener('keydown', (event) => {
-      if ((event.key === 'y' || event.key === 'Y') && !event.repeat) {
+      if ((event.key === 'y' || event.key === 'Y' || event.key === '=') && !event.repeat) {
         this.highSpeedMode = !this.highSpeedMode;
       }
       if (event.key && event.key.length === 1) {
@@ -421,8 +396,9 @@ export class PolicyController {
   }
 
   async _initOrt() {
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-    ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 1);
+    if (this.wasmPaths) ort.env.wasm.wasmPaths = this.wasmPaths;
+    ort.env.wasm.numThreads = globalThis.crossOriginIsolated
+      ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
   }
 
   async _initSession() {
@@ -477,8 +453,7 @@ export class PolicyController {
         inputShape: this.depthInputShape
       });
     } catch (error) {
-      console.warn('Depth backbone not available, using zeros:', error);
-      this.depthSession = null;
+      throw new Error(`Depth backbone is required: ${error.message}`);
     }
   }
 
@@ -501,7 +476,7 @@ export class PolicyController {
       return fallbackMeta?.[key];
     };
 
-    if (!meta || (typeof meta.get === 'function' && meta.size === 0)) {
+    if (!meta || (typeof meta.get === 'function' ? meta.size === 0 : Object.keys(meta).length === 0)) {
       console.warn('policy.onnx metadata is unavailable in this runtime. Using ONNX fallback parser.');
       if (this.modelBytes) {
         try {
@@ -512,6 +487,7 @@ export class PolicyController {
       }
     }
 
+    if (fallbackMeta) meta = fallbackMeta;
     const activeMeta = meta ?? fallbackMeta;
     if (!activeMeta) {
       console.warn('policy.onnx metadata could not be read.');
@@ -546,7 +522,12 @@ export class PolicyController {
     };
 
     this.jointNames = jointNames;
-    this.observationNames = observationNames;
+    this.observationNames = this.observationLayout === 'php-release'
+      ? RELEASE_OBSERVATIONS.slice() : observationNames;
+    if (this.observationLayout === 'php-release' &&
+        (!observationNames.includes('dof_pos') || !observationNames.includes('velocity_command'))) {
+      throw new Error('Selected model does not match the PHP release observation contract');
+    }
 
     const numActions = this.jointNames.length;
     if (actionScaleRaw.length === 1 && numActions > 1) {
@@ -585,10 +566,13 @@ export class PolicyController {
         case 'command':
           size += 3;
           break;
+        case 'velocity_command':
         case 'placeholder':
           size += 15;
           break;
+        case 'dof_pos':
         case 'joint_pos':
+        case 'dof_vel':
         case 'joint_vel':
         case 'actions':
           size += this.jointNames.length;
@@ -636,12 +620,12 @@ export class PolicyController {
 
     const missingJoints = this.jointInfo.filter((info) => !Number.isInteger(info.jointId)).map((info) => info.name);
     if (missingJoints.length > 0) {
-      console.warn('Policy joint names missing from model:', missingJoints);
+      throw new Error(`Policy joints missing from model: ${missingJoints.join(', ')}`);
     }
 
     const missingActuators = this.jointInfo.filter((info) => Number.isInteger(info.jointId) && !Number.isInteger(info.ctrlIndex)).map((info) => info.name);
     if (missingActuators.length > 0) {
-      console.warn('Policy joints without actuators:', missingActuators);
+      throw new Error(`Policy joints without actuators: ${missingActuators.join(', ')}`);
     }
   }
 
@@ -703,6 +687,7 @@ export class PolicyController {
           this.obsBuffer.set(torsoProjectedGravity, offset);
           offset += 3;
           break;
+        case 'velocity_command':
         case 'placeholder':
           this.obsBuffer.set(this.joystickState, offset);
           offset += 15;
@@ -711,6 +696,7 @@ export class PolicyController {
           this.obsBuffer.set(DEFAULT_COMMAND, offset);
           offset += 3;
           break;
+        case 'dof_pos':
         case 'joint_pos': {
           for (let i = 0; i < this.jointInfo.length; i++) {
             const info = this.jointInfo[i];
@@ -720,6 +706,7 @@ export class PolicyController {
           offset += this.jointInfo.length;
           break;
         }
+        case 'dof_vel':
         case 'joint_vel': {
           for (let i = 0; i < this.jointInfo.length; i++) {
             const info = this.jointInfo[i];
@@ -753,73 +740,13 @@ export class PolicyController {
     };
   }
 
-  _resizeBilinear(input, inW, inH, outW, outH) {
-    const output = new Float32Array(outW * outH);
-    if (inW === outW && inH === outH) {
-      output.set(input);
-      return output;
-    }
-    const scaleX = inW / outW;
-    const scaleY = inH / outH;
-    for (let y = 0; y < outH; y++) {
-      const srcY = (y + 0.5) * scaleY - 0.5;
-      const y0 = Math.max(0, Math.min(inH - 1, Math.floor(srcY)));
-      const y1 = Math.min(inH - 1, y0 + 1);
-      const wy = srcY - y0;
-      for (let x = 0; x < outW; x++) {
-        const srcX = (x + 0.5) * scaleX - 0.5;
-        const x0 = Math.max(0, Math.min(inW - 1, Math.floor(srcX)));
-        const x1 = Math.min(inW - 1, x0 + 1);
-        const wx = srcX - x0;
-        const v00 = input[y0 * inW + x0];
-        const v10 = input[y0 * inW + x1];
-        const v01 = input[y1 * inW + x0];
-        const v11 = input[y1 * inW + x1];
-        const v0 = v00 * (1 - wx) + v10 * wx;
-        const v1 = v01 * (1 - wx) + v11 * wx;
-        output[y * outW + x] = v0 * (1 - wy) + v1 * wy;
-      }
-    }
-    return output;
-  }
-
   _prepareDepthInput() {
+    if (!this.latestDepth) throw new Error('Depth frame is not available yet');
     const { data, width, height } = this.latestDepth;
-    const cropTop = this.depthCrop.top;
-    const cropLeft = this.depthCrop.left;
-    const cropRight = this.depthCrop.right;
-    const cropBottom = this.depthCrop.bottom;
-    const croppedW = Math.max(0, width - cropLeft - cropRight);
-    const croppedH = Math.max(0, height - cropTop - cropBottom);
-    const cropped = new Float32Array(croppedW * croppedH);
-    const minDepth = this.clippingRange[0];
-    const maxDepth = this.clippingRange[1];
-    const pixelCount = croppedW * croppedH;
-    for (let i = 0; i < pixelCount; i++) {
-      const y = Math.floor(i / croppedW);
-      const x = i - y * croppedW;
-      const srcY = y + cropTop;
-      const srcX = x + cropLeft;
-      cropped[i] = data[srcY * width + srcX];
-    }
-
-    const resized = this._resizeBilinear(
-      cropped,
-      croppedW,
-      croppedH,
-      this.depthResize.width,
-      this.depthResize.height
-    );
-
-    const clipped = new Float32Array(resized.length);
-    const range = maxDepth - minDepth;
-
-    for (let i = 0; i < clipped.length; i++) {
-      clipped[i] = (resized[i] - minDepth) / range - 0.5;
-    }
-    this.lastProcessedDepth = clipped;
+    const prepared = preprocessDepth(data, width, height, { bottomUp: true });
+    this.lastProcessedDepth = prepared;
     this.lastProcessedDepthSize = { width: this.depthResize.width, height: this.depthResize.height };
-    return clipped;
+    return prepared;
   }
 
   getProcessedDepthPreview() {
@@ -834,34 +761,17 @@ export class PolicyController {
   }
 
   async _runDepthBackbone() {
-    if (!this.depthSession) {
-      return null;
-    }
+    if (!this.depthSession) throw new Error('Depth backbone is not initialized');
     const depthInput = this._prepareDepthInput();
 
-    const shape = [1, this.depthResize.width, this.depthResize.height];
-    const W = shape[1];
-    const H = shape[2];
-
-    const flippedDepth = new Float32Array(depthInput.length);
-    for (let y = 0; y < H; y++) {
-      const srcRow = (H - 1 - y) * W;
-      const dstRow = y * W;
-      for (let x = 0; x < W; x++) {
-        flippedDepth[dstRow + x] = depthInput[srcRow + x];
-      }
-    }
-    const inputTensor = new ort.Tensor('float32', flippedDepth, [1, H, W]);
+    const inputTensor = new ort.Tensor('float32', depthInput,
+      [1, this.depthResize.height, this.depthResize.width]);
 
     const feeds = { [this.depthInputName]: inputTensor };
     const output = await this.depthSession.run(feeds);
     const outputTensor = output[this.depthOutputName];
-    if (!outputTensor || !outputTensor.data) {
-      return null;
-    }
-    if (outputTensor.data.length !== 32) {
-      console.warn('Depth backbone output length mismatch:', outputTensor.data.length);
-      return null;
+    if (!outputTensor?.data || outputTensor.data.length !== 32) {
+      throw new Error('Depth backbone must return a 32-dimensional latent');
     }
     return outputTensor.data;
   }
@@ -871,17 +781,12 @@ export class PolicyController {
       return;
     }
     this.inFlight = true;
+    const generation = this.generation;
     try {
       const obs = this._buildObservation(model, data);
 
-      let depthFeature = null;
-      if (this.depthSession) {
-        try {
-          depthFeature = await this._runDepthBackbone();
-        } catch (error) {
-          console.warn('Depth backbone inference failed:', error);
-        }
-      }
+      const depthFeature = await this._runDepthBackbone();
+      if (!depthFeature || generation !== this.generation) return;
 
       if (depthFeature && depthFeature.length === 32) {
         this.depthLatentQueue.push(Float32Array.from(depthFeature));
@@ -898,6 +803,7 @@ export class PolicyController {
 
       const obsWithZeros = new Float32Array(obs.length + 32);
       obsWithZeros.set(obs, 0);
+      if (!delayedDepthFeature) throw new Error('Depth latent is not available');
       obsWithZeros.set(delayedDepthFeature, obs.length);
       
       // set zeros
@@ -910,6 +816,7 @@ export class PolicyController {
       }
 
       const output = await this.session.run(feeds);
+      if (generation !== this.generation) return;
       const actionTensor = output[this.outputName];
       if (!actionTensor || !actionTensor.data) {
         throw new Error('Policy output missing action tensor');
@@ -918,8 +825,11 @@ export class PolicyController {
         throw new Error(`Action length ${actionTensor.data.length} does not match joint count ${this.jointNames.length}`);
       }
 
-      this.latestAction.set(actionTensor.data);
-      this.prevActions.set(actionTensor.data);
+      for (let i = 0; i < actionTensor.data.length; i++) {
+        if (!Number.isFinite(actionTensor.data[i])) throw new Error('Non-finite policy action');
+        this.latestAction[i] = Math.max(-100, Math.min(100, actionTensor.data[i]));
+      }
+      this.prevActions.set(this.latestAction);
 
       for (let i = 0; i < this.latestTarget.length; i++) {
         this.latestTarget[i] = this.defaultJointPos[i] + this.actionScale[i] * this.latestAction[i];
@@ -927,6 +837,15 @@ export class PolicyController {
     } finally {
       this.inFlight = false;
     }
+  }
+
+  applyInitialPose(model, data) {
+    for (let i = 0; i < this.jointInfo.length; i++) {
+      data.qpos[this.jointInfo[i].qposAdr] = this.defaultJointPos[i];
+      data.qvel[this.jointInfo[i].qvelAdr] = 0;
+    }
+    this.mujoco.mj_forward(model, data);
+    this.reset();
   }
 
   applyControl(model, data) {

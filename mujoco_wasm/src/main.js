@@ -5,13 +5,16 @@ import { OrbitControls    } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DragStateManager } from './utils/DragStateManager.js';
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, drawTendonsAndFlex, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import { PolicyController } from './policy/policyController.js';
+import { RELEASE_DEPTH } from './policy/releaseContract.js';
+import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm?url';
+import ortModuleUrl from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url';
 import   load_mujoco        from 'mujoco-js/dist/mujoco_wasm.js';
 
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
 
 // Set up Emscripten's Virtual File System
-var initialScene = "g1_with_terrain.xml";
+var initialScene = "g1_release_terrain.xml";
 const terrainObstacles = Array.from({ length: 12 }, (_, index) => ({
   name: `terrain_box_${index + 2}`,
   x: (index + 1) * 5,
@@ -22,7 +25,7 @@ const obstacleWarningMinApproachSpeed = 0.3;
 const obstacleWarningHoldMs = 800;
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
-mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("../assets/scenes/" + initialScene)).text());
+mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("../assets/scenes/" + initialScene + "?release=70a344f")).text());
 
 export class MuJoCoDemo {
   constructor() {
@@ -47,13 +50,6 @@ export class MuJoCoDemo {
     this.obstacleWarningTargetName = null;
     this.highlightedObstacleName = null;
     this.pelvisFollowOffset = new THREE.Vector3(-4.0, 1.5, 0.0);
-    this.defaultJointPos = [
-      0.162997201, -0.0361181423, -0.0214254409, 0.267154634, -0.174296871, 0.212671682,
-      0.282425106, -0.0584460497, -0.556104779, 0.126711249, -0.123827517, -0.190653816,
-      0.000492588617, -0.0195334535, 0.428676069,
-      -0.00628881808, 0.161155701, 0.236345276, 0.980316162, 0.15456377, 0.0774896815, 0.0205286704, -0.128641531,
-      -0.0847690701, -0.255017966, 1.09530210, -0.134532213, 0.0875737667, 0.0601755157
-    ];
     this.container = document.createElement( 'div' );
     document.body.appendChild( this.container );
     const guiMode = import.meta.env.VITE_GUI_MODE || 'open';
@@ -145,12 +141,14 @@ export class MuJoCoDemo {
     this.depthCameraConfig = {
       width: 106,
       height: 60,
-      horizontalFovDeg: 58.4,
+      horizontalFovDeg: RELEASE_DEPTH.horizontalFovDeg,
       minRange: 0.3,
       maxRange: 3.0,
     };
     this.depthCameraView = new THREE.PerspectiveCamera(
-      this.depthCameraConfig.horizontalFovDeg,
+      THREE.MathUtils.radToDeg(2 * Math.atan(
+        Math.tan(THREE.MathUtils.degToRad(this.depthCameraConfig.horizontalFovDeg) / 2)
+        / (this.depthCameraConfig.width / this.depthCameraConfig.height))),
       this.depthCameraConfig.width / this.depthCameraConfig.height,
       this.depthCameraConfig.minRange,
       this.depthCameraConfig.maxRange
@@ -300,6 +298,7 @@ export class MuJoCoDemo {
       this.depthPreviewSize.height,
       THREE.RGBAFormat
     );
+    this.depthPreviewTexture.flipY = true; // The processed policy image is top-down.
     this.depthPreviewTexture.minFilter = THREE.NearestFilter;
     this.depthPreviewTexture.magFilter = THREE.NearestFilter;
     this.depthPreviewTexture.needsUpdate = true;
@@ -383,7 +382,16 @@ export class MuJoCoDemo {
     await this.initPolicy();
 
     // Start the render loop only after the model and assets are ready
-    this.renderer.setAnimationLoop( this.render.bind(this) );
+    // Three.js does not await async frame callbacks; serialize physics and ONNX.
+    this.renderInFlight = false;
+    this.renderer.setAnimationLoop((timeMS) => {
+      if (this.renderInFlight) return;
+      this.renderInFlight = true;
+      this.render(timeMS).catch((error) => {
+        this.params.paused = true;
+        console.error('Simulation stopped:', error);
+      }).finally(() => { this.renderInFlight = false; });
+    });
   }
 
   bindTrackingTargets() {
@@ -445,6 +453,30 @@ export class MuJoCoDemo {
     } else {
       console.warn('Depth camera anchor body not found; using world-fixed camera.');
     }
+  }
+
+  captureDepthFrame() {
+    this.mujoco.mj_forward(this.model, this.data);
+    for (let b = 0; b < this.model.nbody; b++) {
+      if (!this.bodies[b]) continue;
+      getPosition(this.data.xpos, b, this.bodies[b].position);
+      getQuaternion(this.data.xquat, b, this.bodies[b].quaternion);
+      this.bodies[b].updateWorldMatrix();
+    }
+    this.renderer.setScissorTest(false);
+    this.renderer.setRenderTarget(this.depthTarget);
+    this.renderer.clear();
+    this.renderer.render(this.scene, this.depthCameraView);
+    this.depthInferenceMaterial.uniforms.cameraNear.value = this.depthCameraView.near;
+    this.depthInferenceMaterial.uniforms.cameraFar.value = this.depthCameraView.far;
+    this.renderer.setRenderTarget(this.depthInferenceTarget);
+    this.renderer.clear();
+    this.renderer.render(this.depthInferenceScene, this.depthCamera);
+    this.renderer.readRenderTargetPixels(this.depthInferenceTarget, 0, 0,
+      this.depthInset.width, this.depthInset.height, this.depthPixels);
+    this.renderer.setRenderTarget(null);
+    for (let i = 0; i < this.depthFrame.length; i++) this.depthFrame[i] = this.depthPixels[i * 4];
+    this.policyController.setDepthImage(this.depthFrame, this.depthInset.width, this.depthInset.height);
   }
 
   updateSpeedModeIndicator() {
@@ -533,19 +565,8 @@ export class MuJoCoDemo {
     }
 
     const isPrimaryDemoScene = this.params.scene === initialScene;
-    const startQpos = 7;
-    const startQvel = 6;
-    const canApplyJointInit =
-      isPrimaryDemoScene &&
-      (startQpos + this.defaultJointPos.length) <= this.data.qpos.length &&
-      (startQvel + this.defaultJointPos.length) <= this.data.qvel.length;
-    if (canApplyJointInit) {
-      for (let i = 0; i < this.defaultJointPos.length; i++) {
-        this.data.qpos[startQpos + i] = this.defaultJointPos[i];
-      }
-      for (let i = 0; i < this.defaultJointPos.length; i++) {
-        this.data.qvel[startQvel + i] = 0.0;
-      }
+    if (isPrimaryDemoScene && this.policyController) {
+      this.policyController.applyInitialPose(this.model, this.data);
     }
 
     this.mujoco.mj_forward(this.model, this.data);
@@ -564,11 +585,14 @@ export class MuJoCoDemo {
 
   async initPolicy() {
     const urlParams = new URLSearchParams(window.location.search);
-    const defaultPolicyPath = './2026-01-17_09-51-30_student-new-loco-old-skill_student.onnx';
+    const defaultPolicyPath = './php-release/student.onnx';
     const modelPath = urlParams.get('policy') || defaultPolicyPath;
     const controller = new PolicyController(this.mujoco, {
       modelPath: modelPath,
-      depthModelPath: urlParams.get('depthPolicy') || modelPath.replace('_student.onnx', '_depth_backbone.onnx'),
+      depthModelPath: urlParams.get('depthPolicy') || modelPath.replace('student.onnx', 'depth_backbone.onnx'),
+      observationLayout: urlParams.get('layout') || (modelPath === defaultPolicyPath ? 'php-release' : 'metadata'),
+      wasmPaths: { wasm: ortWasmUrl, mjs: ortModuleUrl },
+      depthLatencySteps: 7,
       controlDt: 0.02
     });
     try {
@@ -577,10 +601,13 @@ export class MuJoCoDemo {
       this.policyStepCounter = 0;
       const timestep = this.model?.opt?.timestep ?? 0.002;
       this.policyDecimation = Math.max(1, Math.round(controller.controlDt / timestep));
+      this.depthDecimation = Math.max(1, Math.round(1 / (RELEASE_DEPTH.renderHz * timestep)));
+      if (this.params.scene === initialScene) controller.applyInitialPose(this.model, this.data);
       console.log('Policy loaded. Decimation:', this.policyDecimation);
     } catch (error) {
       console.error('Failed to initialize policy:', error);
       this.policyController = null;
+      throw error;
     }
   }
 
@@ -655,11 +682,13 @@ export class MuJoCoDemo {
         }
 
         if (this.policyController && this.params.policyEnabled) {
+          if (this.policyStepCounter % this.depthDecimation === 0) this.captureDepthFrame();
           if (this.policyStepCounter % this.policyDecimation === 0) {
             try {
               await this.policyController.requestAction(this.model, this.data);
             } catch (error) {
-              console.error('Policy inference error:', error);
+              this.params.paused = true;
+              throw error;
             }
           }
           this.policyController.applyControl(this.model, this.data);
@@ -740,37 +769,8 @@ export class MuJoCoDemo {
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
 
-    // Render depth from the secondary camera into a target.
-    this.renderer.setRenderTarget(this.depthTarget);
-    this.renderer.clear();
-    this.renderer.render(this.scene, this.depthCameraView);
-    this.renderer.setRenderTarget(null);
-
-    // Render depth into a float target for inference (linear depth in meters).
-    this.depthInferenceMaterial.uniforms.cameraNear.value = this.depthCameraView.near;
-    this.depthInferenceMaterial.uniforms.cameraFar.value = this.depthCameraView.far;
-    this.renderer.setRenderTarget(this.depthInferenceTarget);
-    this.renderer.clear();
-    this.renderer.render(this.depthInferenceScene, this.depthCamera);
-    this.renderer.readRenderTargetPixels(
-      this.depthInferenceTarget,
-      0,
-      0,
-      this.depthInset.width,
-      this.depthInset.height,
-      this.depthPixels
-    );
-    this.renderer.setRenderTarget(null);
     const showRawDepth = !!this.params.showRawDepth;
-
     if (this.policyController) {
-      const width = this.depthInset.width;
-      const height = this.depthInset.height;
-      const pixelCount = width * height;
-      for (let i = 0; i < pixelCount; i++) {
-        this.depthFrame[i] = this.depthPixels[i * 4];
-      }
-      this.policyController.setDepthImage(this.depthFrame, width, height);
       if (this.depthRawPixels && this.depthRawTexture && showRawDepth) {
         const minDepth = 0.3;
         const maxDepth = 3.0;
@@ -805,6 +805,7 @@ export class MuJoCoDemo {
             height,
             THREE.RGBAFormat
           );
+          this.depthPreviewTexture.flipY = true; // The processed policy image is top-down.
           this.depthPreviewTexture.minFilter = THREE.NearestFilter;
           this.depthPreviewTexture.magFilter = THREE.NearestFilter;
           this.depthPreviewMaterial.map = this.depthPreviewTexture;

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { copyMuJoCoVectors } from './utils/meshCoordinates.js';
+import { createGroundVisual } from './utils/groundVisual.js';
 import { Reflector  } from './utils/Reflector.js';
 import { MuJoCoDemo } from './main.js';
 
@@ -50,7 +52,7 @@ export function setupGUI(parentContext) {
     // "Humanoid": "humanoid.xml", "Cassie": "agility_cassie/scene.xml",
     // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
     // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
-    "G1 Terrain": "g1_with_terrain.xml",
+    "G1 Terrain": "g1_release_terrain.xml",
     // "Torture Model": "model.xml", "Flex": "flex.xml", "Car": "car.xml", 
   }).name('Example Scene').onChange(reload);
 
@@ -247,6 +249,8 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
     let fullString = textDecoder.decode(model.names);
     let names = fullString.split(textDecoder.decode(new ArrayBuffer(1)));
 
+    // Rendering must copy mesh buffers before changing coordinate conventions.
+    // Mutating MuJoCo mesh vertices also changes mesh collision geometry.
     // Create the root object.
     let mujocoRoot = new THREE.Group();
     mujocoRoot.name = "MuJoCo Root";
@@ -343,25 +347,12 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
         if (!(meshID in meshes)) {
           geometry = new THREE.BufferGeometry();
 
-          let vertex_buffer = model.mesh_vert.subarray(
-             model.mesh_vertadr[meshID] * 3,
-            (model.mesh_vertadr[meshID]  + model.mesh_vertnum[meshID]) * 3);
-          for (let v = 0; v < vertex_buffer.length; v+=3){
-            //vertex_buffer[v + 0] =  vertex_buffer[v + 0];
-            let temp             =  vertex_buffer[v + 1];
-            vertex_buffer[v + 1] =  vertex_buffer[v + 2];
-            vertex_buffer[v + 2] = -temp;
-          }
-
-          let normal_buffer = model.mesh_normal.subarray(
-             model.mesh_normaladr[meshID] * 3,
-            (model.mesh_normaladr[meshID]  + model.mesh_normalnum[meshID]) * 3);
-          for (let v = 0; v < normal_buffer.length; v+=3){
-            //normal_buffer[v + 0] =  normal_buffer[v + 0];
-            let temp             =  normal_buffer[v + 1];
-            normal_buffer[v + 1] =  normal_buffer[v + 2];
-            normal_buffer[v + 2] = -temp;
-          }
+          const vertex_buffer = copyMuJoCoVectors(model.mesh_vert.subarray(
+            model.mesh_vertadr[meshID] * 3,
+            (model.mesh_vertadr[meshID] + model.mesh_vertnum[meshID]) * 3));
+          const normal_buffer = copyMuJoCoVectors(model.mesh_normal.subarray(
+            model.mesh_normaladr[meshID] * 3,
+            (model.mesh_normaladr[meshID] + model.mesh_normalnum[meshID]) * 3));
 
           let uv_buffer = model.mesh_texcoord.subarray(
              model.mesh_texcoordadr[meshID] * 2,
@@ -491,6 +482,7 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
       // Create a new material for each geom to avoid cross-contamination
       let currentMaterial = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(color[0] * colorScale, color[1] * colorScale, color[2] * colorScale),
+        flatShading: geomName === "floor" || geomName.startsWith("terrain_box_"),
         transparent: alpha < 1.0,
         opacity: alpha,
         specularIntensity: model.geom_matid[g] != -1 ?       model.mat_specular   [model.geom_matid[g]] : undefined,
@@ -545,8 +537,14 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
 
       // Make everything visible to depth camera except head_link.
       mesh.layers.enable(1);
+      if (geomName === "floor" && meshName === "php_release_terrain_0") {
+        // Keep the exact finite OBJ mesh for policy depth. Only the main view
+        // gets the original checkerboard/reflective presentation plane.
+        mesh.layers.set(1);
+        mujocoRoot.add(createGroundVisual(model));
+      }
       const isFinishMarker = geomName.startsWith("finish_") || (bodies[b] && bodies[b].name === "finish_marker");
-      if (geomName === "head_link" || meshName === "head_link" || isFinishMarker) {
+      if (["head_link", "torso_link", "logo_link", "waist_roll_link"].includes(meshName) || geomName === "head_link" || isFinishMarker) {
         mesh.layers.disable(1);
         if (geomName === "head_link" || meshName === "head_link") {
           parent.headLinkMesh = mesh;
@@ -716,6 +714,8 @@ export async function downloadExampleScenesFolder(mujoco) {
     "scene.xml",
     "g1_terrain.xml",
     "g1_with_terrain.xml",
+    "g1_release_terrain.xml",
+    "php-release/terrain.xml",
     "meshes/g1/terrain_course/76_low/76_low.obj",
     "meshes/g1/terrain_course/76_low/76_low_1.obj",
     "meshes/g1/terrain_course/76_low/76_low_2.obj",
@@ -800,7 +800,8 @@ export async function downloadExampleScenesFolder(mujoco) {
     "model_with_tendon.xml",
   ];
 
-  let requests = allFiles.map((url) => fetch("../assets/scenes/" + url));
+  let requests = allFiles.map((url) => fetch("../assets/scenes/" + url +
+    (url === "g1_release_terrain.xml" || url.startsWith("php-release/") ? "?release=70a344f" : "")));
   let responses = await Promise.all(requests);
   for (let i = 0; i < responses.length; i++) {
       let split = allFiles[i].split("/");
